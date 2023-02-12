@@ -7,6 +7,9 @@ suit_names = ['Clubs', 'Diamonds', 'Hearts', 'Spades']
 face_names = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
 gameboard = Canvas(680, 600, 'dark green', 'FreeCell')
 
+# global message box
+message = Text("Welcome to FreeCell!", centerPt=Point(340, 580))
+message.setFontColor("white")
 
 """
 Define the Card class
@@ -61,6 +64,9 @@ def update_card(decks):
     x2, y2 = 50, 200
 
     gameboard.clear()
+
+    # basic elements
+    gameboard.add(message)
     
     dx = 0
     for card in decks[True][:4]:
@@ -123,14 +129,25 @@ def move_card(decks, moveFrom, moveTo):
     return decks
 
 def autosort_card(decks):
-    for column, cards in enumerate(decks[False]):
+    for column, cards in enumerate(decks[False]): # check decks
         if len(cards) == 0:
             continue
         for index, suit in enumerate(suit_names):
             if cards[-1].suit == suit and \
-                (not (decks[True][4+index] or cards[-1].face_num) or\
+                (not (decks[True][4+index] or cards[-1].face_num) or \
                 (decks[True][4+index] and cards[-1].face_num == decks[True][4+index][-1].face_num + 1)):
                 decks = move_card(decks, (column, False), (4+index, True))
+                decks = autosort_card(decks)
+                break
+    
+    for column, cards in enumerate(decks[True][:4]): # check free cells
+        if len(cards) == 0:
+            continue
+        for index, suit in enumerate(suit_names):
+            if cards[-1].suit == suit and \
+                (not (decks[True][4+index] or cards[-1].face_num) or \
+                (decks[True][4+index] and cards[-1].face_num == decks[True][4+index][-1].face_num + 1)):
+                decks = move_card(decks, (column, True), (4+index, True))
                 decks = autosort_card(decks)
                 break
     
@@ -170,22 +187,28 @@ if __name__ == "__main__":
             if isCell and index < 4: # free cell
                 if not decks[isCell][index]:
                     decks = move_card(decks, moveFrom, moveTo)
+                    message.setMessage("")
                 else:
                     decks = move_card(decks, moveFrom, moveFrom)
+                    message.setMessage("You cannot move card to non-empty free cell!")
             elif isCell and index >= 4: # home cell
                 if decks[moveFrom[1]][moveFrom[0]][-1].suit == suit_names[index - 4] and \
                     (not (decks[isCell][index] or decks[moveFrom[1]][moveFrom[0]][-1].face_num) or\
                     (decks[isCell][index] and decks[moveFrom[1]][moveFrom[0]][-1].face_num == decks[isCell][index][-1].face_num + 1)):
                     decks = move_card(decks, moveFrom, moveTo)
+                    message.setMessage("")
                 else:
                     decks = move_card(decks, moveFrom, moveFrom)
+                    message.setMessage("Wrong move! Card at home cell must be organized from A to K.")
             else: # decks
                 if not decks[isCell][index] or \
                     (decks[moveFrom[1]][moveFrom[0]][-1].color != decks[isCell][index][-1].color and \
                     decks[moveFrom[1]][moveFrom[0]][-1].face_num + 1 == decks[isCell][index][-1].face_num):
                     decks = move_card(decks, moveFrom, moveTo)
+                    message.setMessage("")
                 else:
                     decks = move_card(decks, moveFrom, moveFrom)
+                    message.setMessage("Wrong move! Card at decks must be organized from K to A and alternating colors.")
             decks = autosort_card(decks)
 
         else:
@@ -200,5 +223,6 @@ if __name__ == "__main__":
 
         # End condition
         if sum([len(i) for i in decks[True][4:]]) == 52:
-            print("YOU WON!")
+            decks = update_card(decks)
+            message.setMessage("You Won! Congraturations!")
             break
