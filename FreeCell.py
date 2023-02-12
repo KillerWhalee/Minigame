@@ -69,6 +69,7 @@ def update_card(decks):
             gameboard.add(card[-1].image)
         else:
             gameboard.add(Rectangle(72, 100, Point(x0 + dx, y0)))
+
         dx += 75
     
     dx = 0
@@ -78,19 +79,22 @@ def update_card(decks):
             gameboard.add(card[-1].image)
         else:
             gameboard.add(Rectangle(72, 100, Point(x1 + dx, y1)))
+
         dx += 75
     
     dx, dy = 0, 0 
     for deck in decks[False]:
-        for card in deck:
-            card.image.moveTo(x2 + dx, y2 + dy - card.pick)
-            gameboard.add(card.image)
-            dy += 20
-        
+        if deck:
+            for card in deck:
+                card.image.moveTo(x2 + dx, y2 + dy - card.pick)
+                gameboard.add(card.image)
+                dy += 20
+        else:
+            gameboard.add(Rectangle(72, 100, Point(x2 + dx, y2 + dy)))
+
         dx += 75
         if dx == 300:
             dx += 50
-
         dy = 0
 
 def select_card(decks):
@@ -118,7 +122,23 @@ def move_card(decks, moveFrom, moveTo):
     update_card(decks)
     return decks
 
-def main():
+def autosort_card(decks):
+    for column, cards in enumerate(decks[False]):
+        if len(cards) == 0:
+            continue
+        for index, suit in enumerate(suit_names):
+            if cards[-1].suit == suit and \
+                (not (decks[True][4+index] or cards[-1].face_num) or\
+                (decks[True][4+index] and cards[-1].face_num == decks[True][4+index][-1].face_num + 1)):
+                decks = move_card(decks, (column, False), (4+index, True))
+                decks = autosort_card(decks)
+                break
+    
+    return decks
+
+
+# START MAIN PROGRAM
+if __name__ == "__main__":
 
     deque = []
 
@@ -155,7 +175,7 @@ def main():
             elif isCell and index >= 4: # home cell
                 if decks[moveFrom[1]][moveFrom[0]][-1].suit == suit_names[index - 4] and \
                     (not (decks[isCell][index] or decks[moveFrom[1]][moveFrom[0]][-1].face_num) or\
-                    decks[moveFrom[1]][moveFrom[0]][-1].face_num == decks[isCell][index][-1].face_num + 1):
+                    (decks[isCell][index] and decks[moveFrom[1]][moveFrom[0]][-1].face_num == decks[isCell][index][-1].face_num + 1)):
                     decks = move_card(decks, moveFrom, moveTo)
                 else:
                     decks = move_card(decks, moveFrom, moveFrom)
@@ -166,6 +186,7 @@ def main():
                     decks = move_card(decks, moveFrom, moveTo)
                 else:
                     decks = move_card(decks, moveFrom, moveFrom)
+            decks = autosort_card(decks)
 
         else:
             if decks[isCell][index] and ((isCell and index < 4) or not isCell): # home cell, empty cell excluded
@@ -177,4 +198,7 @@ def main():
 
         selected = not selected
 
-main()
+        # End condition
+        if sum([len(i) for i in decks[True][4:]]) == 52:
+            print("YOU WON!")
+            break
