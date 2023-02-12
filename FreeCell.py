@@ -6,10 +6,16 @@ img_path = './images/'
 suit_names = ['Clubs', 'Diamonds', 'Hearts', 'Spades']
 face_names = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
 gameboard = Canvas(680, 600, 'dark green', 'FreeCell')
+movestack = []
 
 # global message box
 message = Text("Welcome to FreeCell!", centerPt=Point(340, 580))
 message.setFontColor("white")
+commands = Text("undo(Backspace)  restart(R)  auto-sort(A)", centerPt=Point(340, 10))
+commands.setFontColor("white")
+
+# toggle options
+autosort = True # auto-sort
 
 """
 Define the Card class
@@ -23,36 +29,46 @@ class Card:
         self.color = ""
     
     def __str__(self):
-        return f"<{self.color} {self.face_num}>"
+        return f"<{self.color} {self.face}>"
 
 
-def create_deck(number = 1):
+def create_deck(deckID = 0):
     """
     Create a list("deck") of all 52 cards, shuffle them and return the list.
     """
     deck = []
     
-    for i in range(4):
-        for j in range(13):
-            img = Image('./cards/' + suit_names[i] + '_' + face_names[j]+ '.png')
-            card = Card()
-            card.face = face_names[j]
-            card.face_num = j
-            card.suit = suit_names[i]
-            card.image = img
-            card.state = True
-            card.pick = 0
+    if not deckID: # Random Shuffle
+        for i in range(4):
+            for j in range(13):
+                img = Image('./cards/' + suit_names[i] + '_' + face_names[j]+ '.png')
+                card = Card()
+                card.face = face_names[j]
+                card.face_num = j
+                card.suit = suit_names[i]
+                card.image = img
+                card.state = True
+                card.pick = 0
+                card.id = 13*i + j
 
-            if card.suit in ['Clubs', 'Spades']:
-                card.color = 'black'
-            else:
-                card.color = 'red'
+                if card.suit in ['Clubs', 'Spades']:
+                    card.color = 'black'
+                else:
+                    card.color = 'red'
 
-            deck.append(card)
+                deck.append(card)
+        
+        random.shuffle(deck)
+        for card in deck:
+            deckID += card.id
+            deckID *= 52
+        
+        deckID = hex(deckID)
     
-    random.shuffle(deck)
+    else: # Make User Deck
+        pass
 
-    return deck
+    return deck, deckID
 
 def update_card(decks):
     """
@@ -67,6 +83,12 @@ def update_card(decks):
 
     # basic elements
     gameboard.add(message)
+    gameboard.add(commands)
+
+    # counter
+    counter = Text(f"move : {len(movestack)}", centerPt=Point(640, 580))
+    counter.setFontColor("white")
+    gameboard.add(counter)
     
     dx = 0
     for card in decks[True][:4]:
@@ -106,6 +128,7 @@ def update_card(decks):
 def select_card(decks):
     while True:
         wait = gameboard.wait()
+
         if wait.getDescription() == "mouse click":
             x, y = wait.getMouseLocation().get()
 
@@ -121,10 +144,29 @@ def select_card(decks):
                     return index, False
                 elif int(y) in range(25, 125):
                     return index, True
+                
+        elif wait.getDescription() == "keyboard":
+            key = wait.getKey()
+
+            if key == '\b': # undo
+                print("undo")
+                pass
+
+            if key == 'r': # restart
+                print("restart")
+                pass
+                
+            if key == 'a': # auto-sort
+                print("auto-sort")
+                pass
 
 def move_card(decks, moveFrom, moveTo):
     decks[moveFrom[1]][moveFrom[0]][-1].pick = 0
     decks[moveTo[1]][moveTo[0]].append(decks[moveFrom[1]][moveFrom[0]].pop())
+
+    if moveFrom != moveTo:
+        movestack.append((moveFrom, moveTo))
+
     update_card(decks)
     return decks
 
@@ -161,7 +203,7 @@ if __name__ == "__main__":
 
     # prompt for starting a new game and create a deck
     print ("Welcome to FreeCell!\n")
-    deque = create_deck()
+    deque, deckID = create_deck()
 
     # create two hands of dealer and player
     cell = [list() for i in range(8)]
