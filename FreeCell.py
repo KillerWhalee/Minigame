@@ -1,12 +1,12 @@
 import random
 from cs1graphics import *
 
-img_path = './images/'
+IMG_PATH = './images/'
 
-suit_names = ['Clubs', 'Diamonds', 'Hearts', 'Spades']
-face_names = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
-gameboard = Canvas(680, 600, 'dark green', 'FreeCell')
-movestack = []
+SUIT_NAMES = ['Clubs', 'Diamonds', 'Hearts', 'Spades']
+FACE_NAMES = ['Ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'Jack', 'Queen', 'King']
+GAME_BOARD = Canvas(680, 600, 'dark green', 'FreeCell')
+MOVE_STACK = []
 
 # global message box
 message = Text("Welcome to FreeCell!", centerPt=Point(340, 580))
@@ -15,7 +15,7 @@ commands = Text("undo(Backspace)  restart(R)  auto-sort(A)", centerPt=Point(340,
 commands.setFontColor("white")
 
 # toggle options
-autosort = True # auto-sort
+OPT_AUTOSORT = True # auto-sort
 
 """
 Define the Card class
@@ -41,11 +41,11 @@ def create_deck(deckID = 0):
     if not deckID: # Random Shuffle
         for i in range(4):
             for j in range(13):
-                img = Image('./cards/' + suit_names[i] + '_' + face_names[j]+ '.png')
+                img = Image('./cards/' + SUIT_NAMES[i] + '_' + FACE_NAMES[j]+ '.png')
                 card = Card()
-                card.face = face_names[j]
+                card.face = FACE_NAMES[j]
                 card.face_num = j
-                card.suit = suit_names[i]
+                card.suit = SUIT_NAMES[i]
                 card.image = img
                 card.state = True
                 card.pick = 0
@@ -74,29 +74,29 @@ def update_card(decks):
     """
     Update card drawn on the canvas.
     """
-    depth = 100
+
     x0, y0 = 50, 75
     x1, y1 = 400, 75
     x2, y2 = 50, 200
 
-    gameboard.clear()
+    GAME_BOARD.clear()
 
     # basic elements
-    gameboard.add(message)
-    gameboard.add(commands)
+    GAME_BOARD.add(message)
+    GAME_BOARD.add(commands)
 
     # counter
-    counter = Text(f"move : {len(movestack)}", centerPt=Point(640, 580))
+    counter = Text(f"move : {len(MOVE_STACK)}", centerPt=Point(640, 580))
     counter.setFontColor("white")
-    gameboard.add(counter)
+    GAME_BOARD.add(counter)
     
     dx = 0
     for card in decks[True][:4]:
         if card:
             card[-1].image.moveTo(x0 + dx, y0 - card[-1].pick)
-            gameboard.add(card[-1].image)
+            GAME_BOARD.add(card[-1].image)
         else:
-            gameboard.add(Rectangle(72, 100, Point(x0 + dx, y0)))
+            GAME_BOARD.add(Rectangle(72, 100, Point(x0 + dx, y0)))
 
         dx += 75
     
@@ -104,9 +104,9 @@ def update_card(decks):
     for card in decks[True][4:]:
         if card:
             card[-1].image.moveTo(x1 + dx, y1 - card[-1].pick)
-            gameboard.add(card[-1].image)
+            GAME_BOARD.add(card[-1].image)
         else:
-            gameboard.add(Rectangle(72, 100, Point(x1 + dx, y1)))
+            GAME_BOARD.add(Rectangle(72, 100, Point(x1 + dx, y1)))
 
         dx += 75
     
@@ -115,10 +115,10 @@ def update_card(decks):
         if deck:
             for card in deck:
                 card.image.moveTo(x2 + dx, y2 + dy - card.pick)
-                gameboard.add(card.image)
+                GAME_BOARD.add(card.image)
                 dy += 20
         else:
-            gameboard.add(Rectangle(72, 100, Point(x2 + dx, y2 + dy)))
+            GAME_BOARD.add(Rectangle(72, 100, Point(x2 + dx, y2 + dy)))
 
         dx += 75
         if dx == 300:
@@ -127,7 +127,7 @@ def update_card(decks):
 
 def select_card(decks):
     while True:
-        wait = gameboard.wait()
+        wait = GAME_BOARD.wait()
 
         if wait.getDescription() == "mouse click":
             x, y = wait.getMouseLocation().get()
@@ -149,23 +149,24 @@ def select_card(decks):
             key = wait.getKey()
 
             if key == '\b': # undo
-                print("undo")
-                pass
+                decks = undo_cards(decks)
 
             if key == 'r': # restart
                 print("restart")
                 pass
                 
             if key == 'a': # auto-sort
-                print("auto-sort")
-                pass
+                global OPT_AUTOSORT
+                OPT_AUTOSORT = not OPT_AUTOSORT
+                switch = ['off', 'on']
+                message.setMessage(f"auto-sort option: {switch[OPT_AUTOSORT]}.")
 
-def move_card(decks, moveFrom, moveTo):
+def move_card(decks, moveFrom, moveTo, undo=False):
     decks[moveFrom[1]][moveFrom[0]][-1].pick = 0
     decks[moveTo[1]][moveTo[0]].append(decks[moveFrom[1]][moveFrom[0]].pop())
 
-    if moveFrom != moveTo:
-        movestack.append((moveFrom, moveTo))
+    if moveFrom != moveTo and not undo:
+        MOVE_STACK.append((moveFrom, moveTo))
 
     update_card(decks)
     return decks
@@ -174,7 +175,7 @@ def autosort_card(decks):
     for column, cards in enumerate(decks[False]): # check decks
         if len(cards) == 0:
             continue
-        for index, suit in enumerate(suit_names):
+        for index, suit in enumerate(SUIT_NAMES):
             if cards[-1].suit == suit and \
                 (not (decks[True][4+index] or cards[-1].face_num) or \
                 (decks[True][4+index] and cards[-1].face_num == decks[True][4+index][-1].face_num + 1)):
@@ -185,7 +186,7 @@ def autosort_card(decks):
     for column, cards in enumerate(decks[True][:4]): # check free cells
         if len(cards) == 0:
             continue
-        for index, suit in enumerate(suit_names):
+        for index, suit in enumerate(SUIT_NAMES):
             if cards[-1].suit == suit and \
                 (not (decks[True][4+index] or cards[-1].face_num) or \
                 (decks[True][4+index] and cards[-1].face_num == decks[True][4+index][-1].face_num + 1)):
@@ -195,6 +196,15 @@ def autosort_card(decks):
     
     return decks
 
+def undo_cards(decks):
+    if MOVE_STACK:
+        moveTo, moveFrom = MOVE_STACK.pop()
+        decks = move_card(decks, moveFrom, moveTo, undo=True)
+    
+    else:
+        message.setMessage("You cannot undo from the initial board.")
+    
+    return decks
 
 # START MAIN PROGRAM
 if __name__ == "__main__":
@@ -234,7 +244,7 @@ if __name__ == "__main__":
                     decks = move_card(decks, moveFrom, moveFrom)
                     message.setMessage("You cannot move card to non-empty free cell!")
             elif isCell and index >= 4: # home cell
-                if decks[moveFrom[1]][moveFrom[0]][-1].suit == suit_names[index - 4] and \
+                if decks[moveFrom[1]][moveFrom[0]][-1].suit == SUIT_NAMES[index - 4] and \
                     (not (decks[isCell][index] or decks[moveFrom[1]][moveFrom[0]][-1].face_num) or\
                     (decks[isCell][index] and decks[moveFrom[1]][moveFrom[0]][-1].face_num == decks[isCell][index][-1].face_num + 1)):
                     decks = move_card(decks, moveFrom, moveTo)
@@ -251,7 +261,9 @@ if __name__ == "__main__":
                 else:
                     decks = move_card(decks, moveFrom, moveFrom)
                     message.setMessage("Wrong move! Card at decks must be organized from K to A and alternating colors.")
-            decks = autosort_card(decks)
+            
+            if OPT_AUTOSORT:
+                decks = autosort_card(decks)
 
         else:
             if decks[isCell][index] and ((isCell and index < 4) or not isCell): # home cell, empty cell excluded
